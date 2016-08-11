@@ -10,12 +10,13 @@
 -- One way to create 'PrettyType' /documents/ is to define 'ToPretty' instances
 -- for your types by combining the promoted constructors of 'PrettyType'.
 --
+-- If `UndecidableInstances` isn't holding you back, use the type aliases like
+-- 'PutStr', 'PutNat', 'PrettySeperated', etc in these instance definitions.
+--
 -- 'ToPretty' is an open type family, that converts a custom type to a
 -- `PrettyType`.
 --
--- Use the type aliases to get rid of unticked or even ticked promoteds.
---
--- 'showPretty' eventually crafts a 'String' value from a proxy to they custom
+-- 'showPretty' eventually crafts a 'String' value from a proxy to the custom
 -- type.
 --
 -- == Example
