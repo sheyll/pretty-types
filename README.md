@@ -1,9 +1,9 @@
 [![Build Status](https://travis-ci.org/sheyll/pretty-types.svg?branch=master)](https://travis-ci.org/sheyll/pretty-types)
-[![Hackage](https://img.shields.io/badge/hackage-pretty-types-green.svg?style=flat)](http://hackage.haskell.org/package/pretty-types)
+[![Hackage](https://img.shields.io/badge/hackage-prettytypes-green.svg?style=flat)](http://hackage.haskell.org/package/pretty-types)
 
 # Type Level Pretty Printing
 
-A eDSL for type level pretty printing.
+A DSL for type pretty printing.
 
 This Example will render this table:
 
