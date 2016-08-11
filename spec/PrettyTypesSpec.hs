@@ -18,54 +18,54 @@ spec = describe "rendering" $ do
 
   describe "PrettyNat" $ do
     it "renders (PutNat 123) as 123" $
-      ptShow (PX :: PX (PutNat 123)) `shouldBe` "123"
+      showPretty (PX :: PX (PutNat 123)) `shouldBe` "123"
     it "renders ('PrettyNat ('PrettyPadded 10) ('PrettyPrecision 5) 'PrettyDec 123) as \"     00123\"" $
-      ptShow (PX :: PX ('PrettyNat ('PrettyPadded 10) ('PrettyPrecision 5) 'PrettyDec 123))
+      showPretty (PX :: PX ('PrettyNat ('PrettyPadded 10) ('PrettyPrecision 5) 'PrettyDec 123))
         `shouldBe` "     00123"
     it "renders (PutHex8 123) as 7b" $
-      ptShow (PX :: PX (PutHex8 123)) `shouldBe` "7b"
+      showPretty (PX :: PX (PutHex8 123)) `shouldBe` "7b"
     it "renders (PutHeX8 123) as 7B" $
-      ptShow (PX :: PX (PutHeX8 123)) `shouldBe` "7B"
+      showPretty (PX :: PX (PutHeX8 123)) `shouldBe` "7B"
     it "renders (PutHeX64 123) as 000000000000007B" $
-      ptShow (PX :: PX (PutHeX64 123)) `shouldBe` "000000000000007B"
+      showPretty (PX :: PX (PutHeX64 123)) `shouldBe` "000000000000007B"
     it "renders (PutBits16 123) as 0000000001111011" $
-      ptShow (PX :: PX (PutBits16 123)) `shouldBe` "0000000001111011"
+      showPretty (PX :: PX (PutBits16 123)) `shouldBe` "0000000001111011"
     it "renders (PutBits32 123) as 00000000000000000000000001111011" $
-      ptShow (PX :: PX (PutBits32 123)) `shouldBe` "00000000000000000000000001111011"
+      showPretty (PX :: PX (PutBits32 123)) `shouldBe` "00000000000000000000000001111011"
 
   describe "PrettySymbol" $ do
     it "renders (PutStr \"hello\") as \"hello\"" $
-      ptShow (PX :: PX (PutStr "hello")) `shouldBe` "hello"
+      showPretty (PX :: PX (PutStr "hello")) `shouldBe` "hello"
     it "renders ('PrettySymbol ('PrettyPadded 10) ('PrettyPrecision 2) \"hello\") as \"        he\"" $
-      ptShow (PX :: PX ('PrettySymbol ('PrettyPadded 10) ('PrettyPrecision 2) "hello"))
+      showPretty (PX :: PX ('PrettySymbol ('PrettyPadded 10) ('PrettyPrecision 2) "hello"))
         `shouldBe` "        he"
 
   describe "PrettySeperated" $ do
     it "renders (PutNat 0 <++> PutNat 1) as \"01\"" $
-      ptShow (PX :: PX (PutNat 0 <++> PutNat 1)) `shouldBe` "01"
+      showPretty (PX :: PX (PutNat 0 <++> PutNat 1)) `shouldBe` "01"
     it "renders (PutNat 0 <+> PutNat 1) as \"0 1\"" $
-      ptShow (PX :: PX (PutNat 0 <+> PutNat 1)) `shouldBe` "0 1"
+      showPretty (PX :: PX (PutNat 0 <+> PutNat 1)) `shouldBe` "0 1"
     it "renders (PutNat 0 <$$> PutNat 1) as \"0\\n1\"" $
-      ptShow (PX :: PX (PutNat 0 <$$> PutNat 1)) `shouldBe` "0\n1"
+      showPretty (PX :: PX (PutNat 0 <$$> PutNat 1)) `shouldBe` "0\n1"
     it "renders (PutNat 0 <++> PutNat 1 <+> PutNat 2 <$$> PutNat 3 <+> PutNat 4) as \"01 2\\n3 4\"" $
-      ptShow (PX :: PX (PutNat 0 <++> PutNat 1 <+> PutNat 2 <$$> PutNat 3 <+> PutNat 4))
+      showPretty (PX :: PX (PutNat 0 <++> PutNat 1 <+> PutNat 2 <$$> PutNat 3 <+> PutNat 4))
       `shouldBe` "01 2\n3 4"
     it "renders (PutNat 0 <++> 'PrettySpace) as \"0 \"" $
-      ptShow (PX :: PX (PutNat 0 <++> 'PrettySpace)) `shouldBe` "0 "
+      showPretty (PX :: PX (PutNat 0 <++> 'PrettySpace)) `shouldBe` "0 "
     it "renders (PutNat 0 <++> 'PrettyEmpty) as \"0\"" $
-      ptShow (PX :: PX (PutNat 0 <++> 'PrettyEmpty)) `shouldBe` "0"
+      showPretty (PX :: PX (PutNat 0 <++> 'PrettyEmpty)) `shouldBe` "0"
     it "renders ('PrettyEmpty <++> PutNat 0) as \"0\"" $
-      ptShow (PX :: PX ('PrettyEmpty <++> PutNat 0)) `shouldBe` "0"
+      showPretty (PX :: PX ('PrettyEmpty <++> PutNat 0)) `shouldBe` "0"
     it "renders (PutNat 0 <++> 'PrettyEmpty <++> PutNat 1) as \"01\"" $
-      ptShow (PX :: PX (PutNat 0 <++> 'PrettyEmpty <++> PutNat 1)) `shouldBe` "01"
+      showPretty (PX :: PX (PutNat 0 <++> 'PrettyEmpty <++> PutNat 1)) `shouldBe` "01"
     it "renders (PrettyOften 7 (PutStr \".\") as \".......\"" $
-      ptShow (PX :: PX (PrettyOften 7 (PutStr "."))) `shouldBe` "......."
+      showPretty (PX :: PX (PrettyOften 7 (PutStr "."))) `shouldBe` "......."
     it "renders (PrettyMany (PutNat 777) '[]) as \"\"" $
-      ptShow (PX :: PX (PrettyMany (PutNat 777) '[])) `shouldBe` ""
+      showPretty (PX :: PX (PrettyMany (PutNat 777) '[])) `shouldBe` ""
     it "renders (PrettyMany (PutNat 777) '[PutStr \".\"]) as \".\"" $
-      ptShow (PX :: PX (PrettyMany (PutNat 777) '[PutStr "."])) `shouldBe` "."
+      showPretty (PX :: PX (PrettyMany (PutNat 777) '[PutStr "."])) `shouldBe` "."
     it "renders (PrettyMany (PutNat 777) '[PutStr \".\", PutNat 3, PutNat 4]) as \".77737774\"" $
-      ptShow (PX :: PX (PrettyMany (PutNat 777) '[PutStr ".", PutNat 3, PutNat 4])) `shouldBe` ".77737774"
+      showPretty (PX :: PX (PrettyMany (PutNat 777) '[PutStr ".", PutNat 3, PutNat 4])) `shouldBe` ".77737774"
 
   describe "ToPretty" $ do
     it "renders a custom type" $ do

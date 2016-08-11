@@ -184,27 +184,27 @@ type PutHeX64 x = 'PrettyNat 'PrettyUnpadded ('PrettyPrecision 16) 'PrettyHexU x
 
 -- | Create 'PrettyType' from a 'Nat' formatted as bit representation,
 --
--- >>> ptShow (Proxy :: Proxy (PutBits 5))
+-- >>> showPretty (Proxy :: Proxy (PutBits 5))
 -- "101"
 type PutBits x = 'PrettyNat 'PrettyUnpadded 'PrettyPrecise 'PrettyBit x
 -- | Create 'PrettyType' from a 'Nat' formatted as 8-bit bit representation,
 --
--- >>> ptShow (Proxy :: Proxy (PutBits8 5))
+-- >>> showPretty (Proxy :: Proxy (PutBits8 5))
 -- "00000101"
 type PutBits8 x = 'PrettyNat 'PrettyUnpadded ('PrettyPrecision 8) 'PrettyBit x
 -- | Create 'PrettyType' from a 'Nat' formatted as 16-bit bit representation,
 --
--- >>> ptShow (Proxy :: Proxy (PutBits16 5))
+-- >>> showPretty (Proxy :: Proxy (PutBits16 5))
 -- "00000000000000101"
 type PutBits16 x = 'PrettyNat 'PrettyUnpadded ('PrettyPrecision 16) 'PrettyBit x
 -- | Create 'PrettyType' from a 'Nat' formatted as 32-bit bit representation,
 --
--- >>> ptShow (Proxy :: Proxy (PutBits32 5))
+-- >>> showPretty (Proxy :: Proxy (PutBits32 5))
 -- "00000000000000000000000000000000101"
 type PutBits32 x = 'PrettyNat 'PrettyUnpadded ('PrettyPrecision 32) 'PrettyBit x
 -- | Create 'PrettyType' from a 'Nat' formatted as 64-bit bit representation,
 --
--- >>> ptShow (Proxy :: Proxy (PutBits64 5))
+-- >>> showPretty (Proxy :: Proxy (PutBits64 5))
 -- "00000000000000000000000000000000000000000000000000000000000000000000101"
 type PutBits64 x = 'PrettyNat 'PrettyUnpadded ('PrettyPrecision 64) 'PrettyBit x
 
@@ -241,7 +241,7 @@ type PrettyHigh docs = PrettyMany 'PrettyNewline docs
 
 -- | A combination of 'PrettySpace' and 'PrettyMany', e.g.:
 --
--- >>> ptShow (Proxy :: Proxy (PrettyManyIn (PutStr "|") '[PutStr "a", PutStr "b"]))
+-- >>> showPretty (Proxy :: Proxy (PrettyManyIn (PutStr "|") '[PutStr "a", PutStr "b"]))
 -- "|a|b|"
 type PrettyManyIn sep docs =
   PrettySurrounded sep sep (PrettyMany sep docs)
@@ -300,28 +300,28 @@ data PrettyPrecision where
 data PrettyNatFormat =
     -- | Hexa decimal rendering:
     --
-    -- >>> ptShow (Proxy::Proxy (PrettyNat PrettyUnpadded PrettyPrecise PrettyHex 51966))
+    -- >>> showPretty (Proxy::Proxy (PrettyNat PrettyUnpadded PrettyPrecise PrettyHex 51966))
     -- "cafe"
     PrettyHex
     -- | Hexa decimal rendering (upper case):
     --
-    -- >>> ptShow (Proxy::Proxy (PrettyNat PrettyUnpadded PrettyPrecise PrettyHexU 51966))
+    -- >>> showPretty (Proxy::Proxy (PrettyNat PrettyUnpadded PrettyPrecise PrettyHexU 51966))
     -- "CAFE"
   | PrettyHexU
     -- | Decimal rendering:
     --
-    -- >>> ptShow (Proxy::Proxy (PrettyNat PrettyUnpadded PrettyPrecise PrettyHexU 51966))
+    -- >>> showPretty (Proxy::Proxy (PrettyNat PrettyUnpadded PrettyPrecise PrettyHexU 51966))
     -- "51966"
   | PrettyDec
     -- | Binary rendering:
     --
-    -- >>> ptShow (Proxy::Proxy (PrettyNat PrettyUnpadded PrettyPrecise PrettyHexU 51966))
+    -- >>> showPretty (Proxy::Proxy (PrettyNat PrettyUnpadded PrettyPrecise PrettyHexU 51966))
     -- "1100101011111110"
   | PrettyBit
 
 -- *  Pretty Rendering
 
--- | An internal type class for rendering the types of /kind/ 'PrettyType'.
+-- | An __internal__ type class for rendering the types of /kind/ 'PrettyType'.
 class PrettyTypeShow (p :: PrettyType) where
   -- | Given any proxy to a promoted constructor of 'PrettyType', generate a
   -- String.
