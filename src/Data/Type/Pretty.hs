@@ -3,20 +3,20 @@
 -- = Type Pretty Printing
 --
 -- == Printing Custom Types
--- The main usecase is of course printing one own complex types.
 --
--- Convert a custom type to the 'PrettyType' eDSL, then render it using
--- 'ptShow'.
+-- The main usecase of this library is rendering one's own complex types to
+-- pretty 'String' values, e.g. for debugging and tracing purposes.
 --
--- 'ToPretty' is the hooks for pretty type printing custom types,
--- while 'showPretty' renders a type with a 'ToPretty' instance.
+-- One way to create 'PrettyType' /documents/ is to define 'ToPretty' instances
+-- for your types by combining the promoted constructors of 'PrettyType'.
 --
--- 'ToPretty' is an open type family, that maps types to `PrettyType`s. One way
--- to create 'PrettyType' /documents/ is to define instances for your types,
--- which construct a type of kind 'PrettyType' using the promoted constructors
--- of 'PrettyType'.
+-- 'ToPretty' is an open type family, that converts a custom type to a
+-- `PrettyType`.
 --
 -- Use the type aliases to get rid of unticked or even ticked promoteds.
+--
+-- 'showPretty' eventually crafts a 'String' value from a proxy to they custom
+-- type.
 --
 -- == Example
 --
