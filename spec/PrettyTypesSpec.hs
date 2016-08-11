@@ -5,6 +5,7 @@ import           Data.Type.Pretty
 import           Test.Hspec
 import GHC.TypeLits
 import Data.Kind
+import Data.Proxy
 
 main :: IO ()
 main = hspec spec
@@ -68,9 +69,11 @@ spec = describe "rendering" $ do
 
   describe "ToPretty" $ do
     it "renders a custom type" $ do
-      putStrLn $ showPretty (PX :: PX TestTable)
+      putStrLn prettyTestTable
       showPretty (PX :: PX TestTable) `shouldBe` "+-------+-----+------------+\n|  col 1|col 2|       col 3|\n+-------+-----+------------+\n|   2423|  451|       21234|\n| 242322|   42|         n/a|\n|      0| 4351|      623562|\n|   4351|  n/a|         n/a|\n|      0| 4351|      623562|\n+-------+-----+------------+"
 
+prettyTestTable :: String
+prettyTestTable = showPretty (Proxy :: Proxy TestTable)
 
 type TestTable =
   'MyTable         '[MyCol "col 1" 7, MyCol "col 2" 5, MyCol "col 3" 12]
@@ -81,10 +84,14 @@ type TestTable =
            , MyRow '[0              ,4351            ,623562]
            ]
 
+-- | A type with a list of columns and rows.
 data MyTable = MyTable [Type] [Type]
-data MyCol :: Symbol -> Nat -> Type
+
+-- | A row of a table, with a list of values, one each for every column.
 data MyRow :: [Nat] -> Type
 
+-- | The column of a table. It has a width and a column title.
+data MyCol :: Symbol -> Nat -> Type
 
 type instance ToPretty ('MyTable cols rows) =
            PrettyManyIn (PutStr "+") (RowSepLine cols)
@@ -93,10 +100,10 @@ type instance ToPretty ('MyTable cols rows) =
       <$$> PrettyHigh   (TableRows cols rows)
       <$$> PrettyManyIn (PutStr "+") (RowSepLine cols)
 
-type family TableHeading (cols :: [Type]) :: [PrettyType]
-type instance TableHeading '[] = '[]
-type instance TableHeading (MyCol title width ': r) =
-  PutStrW width title  ': TableHeading  r
+type family
+  TableHeading (cols :: [Type]) :: [PrettyType] where
+  TableHeading '[]                      = '[]
+  TableHeading (MyCol title width ': r) = PutStrW width title  ': TableHeading  r
 
 type family
    RowSepLine (cols :: [Type]) :: [PrettyType] where
