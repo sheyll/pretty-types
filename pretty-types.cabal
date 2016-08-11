@@ -8,7 +8,7 @@ license-file:         LICENSE
 author:              Sven Heyll
 maintainer:          sven.heyll@gmail.com
 copyright:           2016 Sven Heyll
-category:            Codec
+category:            Text
 build-type:          Simple
 extra-source-files:   README.md
                     , stack.yaml
