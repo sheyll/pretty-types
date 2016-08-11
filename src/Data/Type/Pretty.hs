@@ -19,9 +19,13 @@
 -- 'showPretty' eventually crafts a 'String' value from a proxy to the custom
 -- type.
 --
+-- It might be helpful to overcome egoistic needs for guaranteed compiler
+-- termination (i.e. allowing UndecidableInstances) in order to be able to use
+-- type aliases like 'PutStr', 'PutNat', etc.
+--
 -- == Example
 --
--- This example shows howto render this table:
+-- Let's start with the output:
 --
 -- > +-------+-----+------------+
 -- > |  col 1|col 2|       col 3|
@@ -33,9 +37,7 @@
 -- > |      0| 4351|      623562|
 -- > +-------+-----+------------+
 --
--- Assume a custom type for tables calles @MyTable@.
---
--- Rendering this table:
+-- ... of rendering this table:
 --
 -- >type TestTable =
 -- >  'MyTable         '[MyCol "col 1" 7, MyCol "col 2" 5, MyCol "col 3" 12]
@@ -47,25 +49,25 @@
 -- >           ]
 -- >
 --
--- Using this function:
+-- ...using this function:
 --
 -- @
 -- prettyTestTable :: String
 -- prettyTestTable = 'showPretty' (Proxy :: Proxy TestTable)
 -- @
 --
--- These are the data types. Note that only numbers can be stored in MyTable.
+-- ...from these data types:
 --
 -- > -- | A type with a list of columns and rows.
 -- > data MyTable = MyTable [Type] [Type]
 -- >
--- > -- | A row of a table, with a list of values, one each for every column.
+-- > -- | A row of a table, with a list of numbers, one each for every column.
 -- > data MyRow :: [Nat] -> Type
 -- >
 -- > -- | The column of a table. It has a width and a column title.
 -- > data MyCol :: Symbol -> Nat -> Type
 --
--- Here's the top-level 'ToPretty' instance:
+-- ...converted to 'PrettyType' using this 'ToPretty' instance:
 --
 -- @
 -- type instance 'ToPretty' ('MyTable cols rows) =
@@ -74,11 +76,7 @@
 --       '<$$>' 'PrettyManyIn' ('PutStr' "+") (RowSepLine cols)
 --       '<$$>' 'PrettyHigh'   (TableRows cols rows)
 --       '<$$>' 'PrettyManyIn' ('PutStr' "+") (RowSepLine cols)
--- @
 --
--- It delegates to these:
---
--- @
 -- type family
 --   TableHeading (cols :: [Type]) :: ['PrettyType'] where
 --   TableHeading '[]                      = '[]
@@ -110,23 +108,30 @@ import GHC.TypeLits
 import Data.Proxy
 import Text.Printf
 
--- * Printing Custom Types
+-- * Pretty Printing Types
 
--- | Pretty print a type for which a 'ToPretty' instance was defined, that
--- converts the type to a 'PrettyType'. If you want to roll your own converter
--- for your type to 'PrettyType', just do that and call 'ptShow' directly.
+-- | Pretty print either types of kind 'PrettyType' or any other type with a
+-- 'ToPretty' instance.
 showPretty
-  :: forall proxy t . PrettyTypeShow (ToPretty t)
+  :: forall proxy (t :: k) . PrettyTypeShow (ToPretty t)
   => proxy t  -- ^ A proxy to the type to print. A 'ToPretty' instance for t must exists.
   -> String
 showPretty _ = ptShow (Proxy :: Proxy (ToPretty t))
 
--- | Write an instance of this for converting your type (preferrable of your
--- kind also) to a promoted 'PrettyType'. NOTE: It might be helpful to turn on
--- UndecidableInstances and use the type like 'PutStr' aliases below.
+-- | Create a 'PrettyType' from a type.
+--
+-- This is a type-level equivalent of the 'Show' class.
+--
+-- Write an instance of this for converting your type (preferrable of your
+-- kind also) to a promoted 'PrettyType'.
 type family ToPretty (a :: k) :: PrettyType
 
--- * Building Pretty Type Documents
+-- | A type of kind 'PrettyType' has a trivial @id@-like'ToPretty' instance.
+type instance ToPretty (t :: PrettyType) = t
+
+-- * Pretty Printing
+
+-- ** Pretty Printing Strings ('Symbol')
 
 -- | A 'PrettyType' for a string.
 type PutStr str = 'PrettySymbol 'PrettyUnpadded 'PrettyPrecise str
@@ -138,58 +143,13 @@ type PutStrW width str =
 -- | A 'PrettyType' for a string with a newline character at the end.
 type PutStrLn str = PutStr str <++> PutStr "\n"
 
+-- ** Pretty Printing Numbers ('Nat')
+
 -- | A 'PrettyType' for a number.
 type PutNat x = 'PrettyNat 'PrettyUnpadded 'PrettyPrecise 'PrettyDec x
 
 -- | A 'PrettyType' for a number with a width.
 type PutNatW width x = 'PrettyNat ('PrettyPadded width) 'PrettyPrecise 'PrettyDec x
-
--- | Concatenate two 'PrettyType'.
-type (<++>) l r = 'PrettySeperated 'PrettyEmpty l r
-infixl 6 <++>
-
--- | Concatenate two 'PrettyType' using a 'PrettySpace'.
-type (<+>) l r = 'PrettySeperated 'PrettySpace l r
-infixl 5 <+>
-
--- | Concatenate two 'PrettyType' using a 'PrettyNewline'.
-type (<$$>) l r = 'PrettySeperated 'PrettyNewline l r
-infixl 4 <$$>
-
--- | Surround a pretty with parens
-type PrettyParens doc = PrettySurrounded (PutStr "(") (PutStr ")") doc
-
--- | Surround a pretty with some pretties
-type PrettySurrounded open close doc  =
-  open <++> doc <++> close
-
--- | Combine a (type level) list of 'PrettyType's next to each other using
--- 'PrettySpace'
-type PrettyWide docs = PrettyMany 'PrettySpace docs
-
--- | Combine a (type level) list of 'PrettyType's below each other using
--- 'PrettyNewline'
-type PrettyHigh docs = PrettyMany 'PrettyNewline docs
-
--- | A combination of 'PrettySpace' and 'PrettyMany', e.g.:
---
--- >>> ptShow (Proxy :: Proxy (PrettyManyIn (PutStr "|") '[PutStr "a", PutStr "b"]))
--- "|a|b|"
-type PrettyManyIn sep docs =
-  PrettySurrounded sep sep (PrettyMany sep docs)
-
--- | Combine a (type level) list of 'PrettyType's seperated by a seperation
--- element.
-type family
-  PrettyMany (sep :: PrettyType)(docs :: [PrettyType]) :: PrettyType where
-  PrettyMany sep '[]            = 'PrettyEmpty
-  PrettyMany sep '[singleOne]   = singleOne
-  PrettyMany sep (next ': rest) = next <++> sep <++> PrettyMany sep rest
-
--- | Repeat a 'PrettyType' @n@-times and append the copies.
-type family PrettyOften (n :: Nat) (doc :: PrettyType) :: PrettyType where
-  PrettyOften 0 doc = 'PrettyEmpty
-  PrettyOften n doc = doc <++> PrettyOften (n-1) doc
 
 -- | Create 'PrettyType' from a 'Nat' formatted as hex number using
 -- lower-case letters for the hex digits.
@@ -247,6 +207,59 @@ type PutBits32 x = 'PrettyNat 'PrettyUnpadded ('PrettyPrecision 32) 'PrettyBit x
 -- >>> ptShow (Proxy :: Proxy (PutBits64 5))
 -- "00000000000000000000000000000000000000000000000000000000000000000000101"
 type PutBits64 x = 'PrettyNat 'PrettyUnpadded ('PrettyPrecision 64) 'PrettyBit x
+
+-- ** Composing Pretty Printers
+
+-- | Concatenate two 'PrettyType'.
+type (<++>) l r = 'PrettySeperated 'PrettyEmpty l r
+infixl 6 <++>
+
+-- | Concatenate two 'PrettyType' using a 'PrettySpace'.
+type (<+>) l r = 'PrettySeperated 'PrettySpace l r
+infixl 5 <+>
+
+-- | Concatenate two 'PrettyType' using a 'PrettyNewline'.
+type (<$$>) l r = 'PrettySeperated 'PrettyNewline l r
+infixl 4 <$$>
+
+-- | Surround a pretty with parens
+type PrettyParens doc = PrettySurrounded (PutStr "(") (PutStr ")") doc
+
+-- | Surround a pretty with some pretties
+type PrettySurrounded open close doc  =
+  open <++> doc <++> close
+
+-- *** Pretty Printing Lists
+
+-- | Combine a (type level) list of 'PrettyType's next to each other using
+-- 'PrettySpace'
+type PrettyWide docs = PrettyMany 'PrettySpace docs
+
+-- | Combine a (type level) list of 'PrettyType's below each other using
+-- 'PrettyNewline'
+type PrettyHigh docs = PrettyMany 'PrettyNewline docs
+
+-- | A combination of 'PrettySpace' and 'PrettyMany', e.g.:
+--
+-- >>> ptShow (Proxy :: Proxy (PrettyManyIn (PutStr "|") '[PutStr "a", PutStr "b"]))
+-- "|a|b|"
+type PrettyManyIn sep docs =
+  PrettySurrounded sep sep (PrettyMany sep docs)
+
+-- | Combine a (type level) list of 'PrettyType's seperated by a seperation
+-- element.
+type family
+  PrettyMany (sep :: PrettyType)(docs :: [PrettyType]) :: PrettyType where
+  PrettyMany sep '[]            = 'PrettyEmpty
+  PrettyMany sep '[singleOne]   = singleOne
+  PrettyMany sep (next ': rest) = next <++> sep <++> PrettyMany sep rest
+
+-- | Repeat a 'PrettyType' @n@-times and append the copies.
+type family PrettyOften (n :: Nat) (doc :: PrettyType) :: PrettyType where
+  PrettyOften 0 doc = 'PrettyEmpty
+  PrettyOften n doc = doc <++> PrettyOften (n-1) doc
+
+-- * Basic Building Blocks
 
 -- | Combinators for /type documents/.
 --
@@ -306,11 +319,12 @@ data PrettyNatFormat =
     -- "1100101011111110"
   | PrettyBit
 
--- * Low-Level Rendering
+-- *  Pretty Rendering
 
--- | In order to actually print anything from the promoted constructors of
--- 'PrettyTypeShow', a type class as common interface is required.
+-- | An internal type class for rendering the types of /kind/ 'PrettyType'.
 class PrettyTypeShow (p :: PrettyType) where
+  -- | Given any proxy to a promoted constructor of 'PrettyType', generate a
+  -- String.
   ptShow :: proxy p -> String
 
 -- | Print nothing.
@@ -358,13 +372,13 @@ class PrintfArgModifier a where
   -- | Generate a piece of a 'printf' format string from a proxy for a type.
   toPrintfArgModifier :: p a -> String
 
--- | Translation of 'PrettyHex' to 'printf' format character: @"x"@
+-- | Translation of 'PrettyHex' to 'printf' format character: @x@
 instance PrintfArgModifier 'PrettyHex where toPrintfArgModifier _  = "x"
--- | Translation of 'PrettyHexU' to 'printf' format character: @"X"@
+-- | Translation of 'PrettyHexU' to 'printf' format character: @X@
 instance PrintfArgModifier 'PrettyHexU where toPrintfArgModifier _ = "X"
--- | Translation of 'PrettyDec' to 'printf' format character: @"d"@
+-- | Translation of 'PrettyDec' to 'printf' format character: @d@
 instance PrintfArgModifier 'PrettyDec where toPrintfArgModifier _  = "d"
--- | Translation of 'PrettyBit' to 'printf' format character: @"b"@
+-- | Translation of 'PrettyBit' to 'printf' format character: @b@
 instance PrintfArgModifier 'PrettyBit where toPrintfArgModifier _  = "b"
 -- | Translation of 'PrettyUnpadded' to an empty modifier string
 instance PrintfArgModifier 'PrettyUnpadded where toPrintfArgModifier _ = ""
