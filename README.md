@@ -3,7 +3,8 @@
 
 # Type Pretty Printing
 
-A tiny eDSL for type pretty printing types, especially uninhabited types.
+A tiny eDSL, not unlike `ErrorMessage` for `TypeError`s to pretty print types,
+especially uninhabited types.
 
 This Example will render this table:
 
