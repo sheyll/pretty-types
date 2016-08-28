@@ -11,7 +11,7 @@
 -- for your types by combining the promoted constructors of 'PrettyType'.
 --
 -- If `UndecidableInstances` isn't holding you back, use the type aliases like
--- 'PutStr', 'PutNat', 'PrettySeperated', etc in these instance definitions.
+-- 'PutStr', 'PutNat', 'PrettyInfix', etc in these instance definitions.
 --
 -- 'ToPretty' is an open type family, that converts a custom type to a
 -- `PrettyType`.
@@ -104,6 +104,8 @@
 -- @
 module Data.Type.Pretty where
 
+import Control.Monad.RWS hiding (tell)
+import qualified Control.Monad.RWS
 import GHC.TypeLits
 import Data.Proxy
 import Text.Printf
@@ -116,7 +118,7 @@ showPretty
   :: forall proxy (t :: k) . PrettyTypeShow (ToPretty t)
   => proxy t  -- ^ A proxy to the type to print. A 'ToPretty' instance for t must exists.
   -> String
-showPretty _ = ptShow (Proxy :: Proxy (ToPretty t))
+showPretty _ = snd $ evalRWS (ptShow (Proxy :: Proxy (ToPretty t))) 0 AtBeginningOfLine
 
 -- | Create a 'PrettyType' from a type.
 --
@@ -210,17 +212,53 @@ type PutBits64 x = 'PrettyNat 'PrettyUnpadded ('PrettyPrecision 64) 'PrettyBit x
 
 -- ** Composing Pretty Printers
 
+-- | A label followed by a colon and space @: @ followed by another element.
+--
+-- >>> showPretty (Proxy :: Proxy ("foo" <:> PutStr "bar"))
+-- @
+-- foo: bar
+-- @
+type (<:>) label body = 'PrettySuffix (PutStr ":") (PutStr label) <+> body
+infixl 5 <:>
+-- | Like '<:>' but begin the body on a new line.
+--
+-- >>> showPretty (Proxy :: Proxy (PutStr "foo" <:$$> PutStr "bar"))
+-- @
+-- foo:
+-- bar
+-- @
+type (<:$$>) label body = 'PrettySuffix (PutStr ":") (PutStr label) <$$> body
+infixl 5 <:$$>
+
+-- | Like '<:$$__>' but indent the body with two spaces.
+--
+-- >>> showPretty (Proxy :: Proxy (PutStr "foo" <:$$--> PutStr "bar"))
+-- @
+-- foo:
+--   bar
+-- @
+type (<:$$-->) label body = 'PrettySuffix (PutStr ":") (PutStr label) <$$--> body
+infixl 3 <:$$-->
+
 -- | Concatenate two 'PrettyType'.
-type (<++>) l r = 'PrettySeperated 'PrettyEmpty l r
+type (<++>) l r = 'PrettyInfix 'PrettyEmpty l r
 infixl 6 <++>
 
 -- | Concatenate two 'PrettyType' using a 'PrettySpace'.
-type (<+>) l r = 'PrettySeperated 'PrettySpace l r
+type (<+>) l r = 'PrettyInfix 'PrettySpace l r
 infixl 5 <+>
 
+-- | Choose the first non-empty from two 'PrettyType's.
+type (<||>) l r = 'PrettyAlternative l r
+infixl 5 <||>
+
 -- | Concatenate two 'PrettyType' using a 'PrettyNewline'.
-type (<$$>) l r = 'PrettySeperated 'PrettyNewline l r
+type (<$$>) l r = 'PrettyInfix 'PrettyNewline l r
 infixl 4 <$$>
+
+-- | Concatenate two 'PrettyType' using a 'PrettyNewline' and indent the second.
+type (<$$-->) l r = 'PrettyInfix 'PrettyNewline l ('PrettyIndent 2 r)
+infixl 3 <$$-->
 
 -- | Surround a pretty with parens
 type PrettyParens doc = PrettySurrounded (PutStr "(") (PutStr ")") doc
@@ -271,10 +309,20 @@ type family PrettyOften (n :: Nat) (doc :: PrettyType) :: PrettyType where
 data PrettyType where
   PrettyEmpty :: PrettyType
   PrettySpace :: PrettyType
+  -- | Begin a newline. Always use this otherwise indentation will not work!
   PrettyNewline :: PrettyType
   PrettySymbol :: PrettyPadded -> PrettyPrecision -> Symbol -> PrettyType
   PrettyNat :: PrettyPadded -> PrettyPrecision -> PrettyNatFormat -> Nat -> PrettyType
-  PrettySeperated :: PrettyType -> PrettyType -> PrettyType -> PrettyType
+  -- | Prefix the second with the first argument, but only if it (the second) has content.
+  PrettyPrefix :: PrettyType -> PrettyType -> PrettyType
+  -- | Combine the last to arguments with the first in between them, but only if both have content.
+  PrettyInfix :: PrettyType -> PrettyType -> PrettyType -> PrettyType
+  -- | Add a the first argument as suffix to the second argument, but only if the second has content.
+  PrettySuffix :: PrettyType -> PrettyType -> PrettyType
+  -- | Indentation. Prefix any line using the given number of 'PrettySpace'.
+  PrettyIndent :: Nat -> PrettyType -> PrettyType
+  -- | Alternative rendering, if the first document ist empty the second will be rendered.
+  PrettyAlternative :: PrettyType -> PrettyType -> PrettyType
 
 -- | Padding for 'PrettyType's 'PrettySymbol' and 'PrettyNat'.
 data PrettyPadded where
@@ -325,45 +373,127 @@ data PrettyNatFormat =
 class PrettyTypeShow (p :: PrettyType) where
   -- | Given any proxy to a promoted constructor of 'PrettyType', generate a
   -- String.
-  ptShow :: proxy p -> String
+  ptShow :: proxy p -> PTM ()
+  -- | Return 'True' if contents would be writting to the output of rendered via 'ptShow'
+  ptHasContent :: proxy p -> PTM Bool
+  ptHasContent _ = return True
+
+-- | Internal monad used by 'ptShow', the state is a 'Bool' indicating
+type PTM a = RWS Indentation String PTRenderState a
+
+-- | Internal; write a possibly indented string, and update the 'PTRenderState' accordingly.
+writeIndented :: String -> PTM ()
+writeIndented s = do
+    st <- get
+    case st of
+        AtBeginningOfLine -> do
+            i <- ask
+            Control.Monad.RWS.tell (replicate i ' ')
+            put AlreadyIndented
+        AlreadyIndented -> return ()
+    Control.Monad.RWS.tell s
+
+-- | Internal type of the indentation used by 'ptShow' in 'PTM'
+type Indentation = Int
+
+-- | Internal state used by 'ptShow' in 'PTM'
+data PTRenderState = AtBeginningOfLine | AlreadyIndented
 
 -- | Print nothing.
-instance PrettyTypeShow 'PrettyEmpty where ptShow _ = ""
+instance PrettyTypeShow 'PrettyEmpty where
+  ptShow _ = return ()
+  ptHasContent _ = return False
+
 -- | Print a single space character.
-instance PrettyTypeShow 'PrettySpace where ptShow _ = " "
+instance PrettyTypeShow 'PrettySpace where
+  ptShow _ = writeIndented " "
+
 -- | Print a single newline character.
-instance PrettyTypeShow 'PrettyNewline where ptShow _ = "\n"
+instance PrettyTypeShow 'PrettyNewline where
+    ptShow _ = do
+        put AtBeginningOfLine
+        Control.Monad.RWS.tell "\n"
 
 -- | Print a 'Symbol' using the 'printf' and the given format parameters.
-instance forall t pad prec.
-    (KnownSymbol t, PrintfArgModifier pad, PrintfArgModifier prec)
-  => PrettyTypeShow ('PrettySymbol pad prec t) where
-  ptShow _ = printf ("%" ++ toPrintfArgModifier (Proxy :: Proxy pad)
-                         ++ toPrintfArgModifier (Proxy :: Proxy prec)
-                         ++ "s")
-                    (symbolVal (Proxy :: Proxy t))
+instance forall t pad prec . (KnownSymbol t, PrintfArgModifier pad, PrintfArgModifier prec) =>
+         PrettyTypeShow ('PrettySymbol pad prec t) where
+    ptShow _ = writeIndented $
+        printf ("%" ++
+                    toPrintfArgModifier (Proxy :: Proxy pad)
+                        ++ toPrintfArgModifier (Proxy :: Proxy prec)
+                            ++ "s")
+               (symbolVal (Proxy :: Proxy t))
+    ptHasContent _ = return (symbolVal (Proxy :: Proxy t) /= "")
 
 -- | Print a 'Nat' using the 'printf' and the given format parameters.
-instance forall fmt x pad prec.
-  (KnownNat x, PrintfArgModifier fmt, PrintfArgModifier pad, PrintfArgModifier prec)
-  => PrettyTypeShow ('PrettyNat pad prec fmt x) where
-  ptShow _ = printf ("%" ++ toPrintfArgModifier (Proxy :: Proxy pad)
-                         ++ toPrintfArgModifier (Proxy :: Proxy prec)
-                         ++ toPrintfArgModifier (Proxy :: Proxy fmt))
-                    (natVal (Proxy :: Proxy x))
+instance forall fmt x pad prec . (KnownNat x, PrintfArgModifier fmt, PrintfArgModifier pad, PrintfArgModifier prec) =>
+         PrettyTypeShow ('PrettyNat pad prec fmt x) where
+    ptShow _ = writeIndented $
+        printf ("%" ++
+                    toPrintfArgModifier (Proxy :: Proxy pad)
+                        ++ toPrintfArgModifier (Proxy :: Proxy prec)
+                            ++ toPrintfArgModifier (Proxy :: Proxy fmt))
+               (natVal (Proxy :: Proxy x))
 
 -- | Concatenate two 'PrettyType's. If one of them is empty print the other
 -- without any seperation character.
-instance forall l r sep .
-  (PrettyTypeShow sep, PrettyTypeShow l, PrettyTypeShow r)
-  => PrettyTypeShow ('PrettySeperated sep l r) where
-  ptShow _ =
-    let rstr = ptShow (Proxy :: Proxy r)
-        lstr = ptShow (Proxy :: Proxy l)
-        sepStr = ptShow (Proxy :: Proxy sep)
-    in if lstr == "" then rstr
-        else if rstr == "" then lstr
-          else lstr ++ sepStr ++ rstr
+instance forall l r sep . (PrettyTypeShow sep, PrettyTypeShow l, PrettyTypeShow r) =>
+         PrettyTypeShow ('PrettyInfix sep l r) where
+    ptShow _ = do
+        leftHasContent <- ptHasContent (Proxy :: Proxy l)
+        rightHasContent <- ptHasContent (Proxy :: Proxy r)
+        when leftHasContent (ptShow (Proxy :: Proxy l))
+        when (leftHasContent && rightHasContent) (ptShow (Proxy :: Proxy sep))
+        when rightHasContent (ptShow (Proxy :: Proxy r))
+
+    ptHasContent _ =
+      (||) <$> ptHasContent (Proxy :: Proxy l)
+          <*> ptHasContent (Proxy :: Proxy r)
+
+-- | Prefix a 'PrettyType' to x, but only if 'ptHasContent' of 'x' holds.
+instance forall x sep . (PrettyTypeShow sep, PrettyTypeShow x) =>
+         PrettyTypeShow ('PrettyPrefix sep x) where
+    ptShow _ = do
+        hasContent <- ptHasContent (Proxy :: Proxy x)
+        when hasContent $ do
+          ptShow (Proxy :: Proxy sep)
+          ptShow (Proxy :: Proxy x)
+
+    ptHasContent _ = ptHasContent (Proxy :: Proxy x)
+
+-- | Add a 'PrettyType' suffix to x, but only if 'ptHasContent' holds.
+instance forall x sep . (PrettyTypeShow sep, PrettyTypeShow x) =>
+         PrettyTypeShow ('PrettySuffix sep x) where
+    ptShow _ = do
+        hasContent <- ptHasContent (Proxy :: Proxy x)
+        when hasContent $ do
+          ptShow (Proxy :: Proxy x)
+          ptShow (Proxy :: Proxy sep)
+
+    ptHasContent _ = ptHasContent (Proxy :: Proxy x)
+
+-- | Render the first document, and if it is empty, the second
+instance forall l r . (PrettyTypeShow l, PrettyTypeShow r) =>
+         PrettyTypeShow ('PrettyAlternative l r) where
+    ptShow _ = do
+        leftHasContent <- ptHasContent (Proxy :: Proxy l)
+        if leftHasContent
+          then ptShow (Proxy :: Proxy l)
+          else ptShow (Proxy :: Proxy r)
+
+    ptHasContent _ =
+      (||) <$> ptHasContent (Proxy :: Proxy l)
+          <*> ptHasContent (Proxy :: Proxy r)
+
+
+-- | Render an indented, nested type.
+instance forall n r . (PrettyTypeShow r, KnownNat n) =>
+         PrettyTypeShow ('PrettyIndent n r) where
+
+    ptShow _ = local (+ (fromIntegral (natVal (Proxy :: Proxy n))))
+                     (ptShow (Proxy :: Proxy r))
+
+    ptHasContent _ =  ptHasContent (Proxy :: Proxy r)
 
 -- | Internal 'printf' format generation. Used internally by 'PrettyTypeShow'
 -- instances to generate the format string piece by piece with the values for

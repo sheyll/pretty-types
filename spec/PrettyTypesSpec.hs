@@ -40,7 +40,7 @@ spec = describe "rendering" $ do
       showPretty (PX :: PX ('PrettySymbol ('PrettyPadded 10) ('PrettyPrecision 2) "hello"))
         `shouldBe` "        he"
 
-  describe "PrettySeperated" $ do
+  describe "PrettyInfix" $ do
     it "renders (PutNat 0 <++> PutNat 1) as \"01\"" $
       showPretty (PX :: PX (PutNat 0 <++> PutNat 1)) `shouldBe` "01"
     it "renders (PutNat 0 <+> PutNat 1) as \"0 1\"" $
@@ -66,6 +66,79 @@ spec = describe "rendering" $ do
       showPretty (PX :: PX (PrettyMany (PutNat 777) '[PutStr "."])) `shouldBe` "."
     it "renders (PrettyMany (PutNat 777) '[PutStr \".\", PutNat 3, PutNat 4]) as \".77737774\"" $
       showPretty (PX :: PX (PrettyMany (PutNat 777) '[PutStr ".", PutNat 3, PutNat 4])) `shouldBe` ".77737774"
+
+  describe "PrettyInfix" $ do
+    it "renders the seperator if nested docs contain text" $
+      showPretty (PX :: PX ('PrettyInfix 'PrettySpace (PutStr "foo") (PutStr "bar"))) `shouldBe` "foo bar"
+    it "renders only the the first document of the second is empty, and no seperator" $
+      showPretty (PX :: PX ('PrettyInfix 'PrettySpace (PutStr "foo") (PutStr ""))) `shouldBe` "foo"
+    it "renders only the the second document of the first is empty, and no seperator" $
+      showPretty (PX :: PX ('PrettyInfix 'PrettySpace (PutStr "") (PutStr "bar"))) `shouldBe` "bar"
+
+  describe "PrettyAlternative" $ do
+    it "renders the first document if is not empty" $
+      showPretty (PX :: PX ('PrettyAlternative (PutStr "foo") (PutStr "bar"))) `shouldBe` "foo"
+    it "renders the second document if the first is empty" $
+      showPretty (PX :: PX ('PrettyAlternative (PutStr "") (PutStr "bar"))) `shouldBe` "bar"
+
+  describe "PrettyPrefix" $ do
+    it "renders the first and second document if the second is not empty" $
+      showPretty (PX :: PX ('PrettyPrefix (PutStr "foo") (PutStr "bar"))) `shouldBe` "foobar"
+    it "renders nothing if the second document is empty" $
+      showPretty (PX :: PX ('PrettyPrefix (PutStr "foo") (PutStr ""))) `shouldBe` ""
+
+  describe "PrettySuffix" $ do
+    it "renders the second and first document if the second is not empty" $
+      showPretty (PX :: PX ('PrettySuffix (PutStr "foo") (PutStr "bar"))) `shouldBe` "barfoo"
+    it "renders nothing if the second document is empty" $
+      showPretty (PX :: PX ('PrettySuffix (PutStr "foo") (PutStr ""))) `shouldBe` ""
+
+  describe "<||>" $ do
+    it "is the type alias for 'PrettyAlternative " $
+      showPretty (PX :: PX (PutStr "foo" <||> PutStr "bar")) `shouldBe` "foo"
+    it "has a lower precedence than <++>" $
+      showPretty (PX :: PX (PutStr "foo" <++> PutStr "" <||> PutStr "baz")) `shouldBe` "foo"
+    it "has a higher precedence than <$$>" $
+      showPretty (PX :: PX (PutStr "foo" <$$> PutStr "" <||> PutStr "baz")) `shouldBe` "foo\nbaz"
+
+  describe "<:>" $ do
+    it "renders no label if the label is empty" $
+      showPretty (PX :: PX ("" <:> PutStr "bar")) `shouldBe` "bar"
+    it "renders a label, a colon followed by a space and the body" $
+      showPretty (PX :: PX ("foo" <:> PutStr "bar")) `shouldBe` "foo: bar"
+    it "renders a label followed by a colon if the body is empty" $
+      showPretty (PX :: PX ("foo" <:> 'PrettyEmpty)) `shouldBe` "foo:"
+
+  describe "<:$$>" $ do
+    it "renders no label if the label is empty" $
+      showPretty (PX :: PX ("" <:$$> PutStr "bar")) `shouldBe` "bar"
+    it "renders a label, a colon followed by the body on the next line" $
+      showPretty (PX :: PX ("foo" <:$$> PutStr "bar")) `shouldBe` "foo:\nbar"
+    it "renders a label followed by a colon if the body is empty" $
+      showPretty (PX :: PX ("foo" <:$$> 'PrettyEmpty)) `shouldBe` "foo:"
+
+  describe "<:$$-->" $ do
+    it "renders no label if the label is empty" $
+      showPretty (PX :: PX ("" <:$$--> PutStr "bar")) `shouldBe` "  bar"
+    it "renders a label, a colon followed by indented the body" $
+      showPretty (PX :: PX ("foo" <:$$--> PutStr "bar")) `shouldBe` "foo:\n  bar"
+    it "renders a label followed by a colon if the body is empty" $
+      showPretty (PX :: PX ("foo" <:$$--> 'PrettyEmpty)) `shouldBe` "foo:"
+
+  describe "PrettyIndent" $ do
+    it "renders the indentation" $
+      showPretty (PX :: PX (PutStr "foo" <$$--> PutStr "bar")) `shouldBe` "foo\n  bar"
+    it "renders the indentation only once per line" $
+      showPretty (PX :: PX (PutStr "foo" <$$--> PutStr "bar1" <+> PutStr "bar2" )) `shouldBe` "foo\n  bar1 bar2"
+    it "renders the indentation of multi lines and the operator precedence is such that no parens are needed." $
+      showPretty (PX :: PX (PutStr "foo" <$$--> PutStr "bar1" <$$> PutStr "bar2")) `shouldBe` "foo\n  bar1\n  bar2"
+    it "renders the nested indentation." $
+      showPretty (PX :: PX (PutStr "foo" <$$-->
+                           (PutStr "bar1" <$$>
+                            PutStr "bar2" <$$-->
+                            PutStr "bar3" <$$>
+                            PutStr "bar4")))
+      `shouldBe` "foo\n  bar1\n  bar2\n    bar3\n    bar4"
 
   describe "ToPretty" $ do
     it "renders a custom type" $ do

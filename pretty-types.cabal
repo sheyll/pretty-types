@@ -1,5 +1,5 @@
 name:                pretty-types
-version:             0.1.1.0
+version:             0.2.0.0
 synopsis:            A small pretty printing DSL for complex types.
 description:         Please see README.md
 homepage:            https://github.com/sheyll/pretty-types#readme
@@ -14,12 +14,14 @@ extra-source-files:   README.md
                     , stack.yaml
                     , .travis.yml
                     , .gitignore
+                    , ChangeLog.md
 cabal-version:       >=1.10
 
 library
   hs-source-dirs:      src
   exposed-modules:     Data.Type.Pretty
   build-depends:       base >= 4.9 && < 5
+                     , mtl >= 2.2 && < 3
   default-language:    Haskell2010
   ghc-options:         -Wall -funbox-strict-fields -fno-warn-unused-do-bind
   default-extensions:  BangPatterns
