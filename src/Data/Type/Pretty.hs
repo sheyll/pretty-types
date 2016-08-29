@@ -109,6 +109,8 @@ import qualified Control.Monad.RWS
 import GHC.TypeLits
 import Data.Proxy
 import Text.Printf
+import Data.Word
+import Data.Int
 
 -- * Pretty Printing Types
 
@@ -130,6 +132,88 @@ type family ToPretty (a :: k) :: PrettyType
 
 -- | A type of kind 'PrettyType' has a trivial @id@-like'ToPretty' instance.
 type instance ToPretty (t :: PrettyType) = t
+
+-- ** ToPretty instances for uninhabited types
+
+-- | A type of kind 'Symbol' is translated to 'PutStr'.
+-- @since 0.2.1.0
+type instance ToPretty (t :: Symbol) = PutStr t
+
+-- | A type of kind 'Nat' is translated to 'PutNat'.
+-- @since 0.2.1.0
+type instance ToPretty (t :: Nat) = PutNat t
+
+-- | Render 'True' as @'PutStr' "'True"@
+-- @since 0.2.1.0
+type instance ToPretty 'True = PutStr "'True"
+
+-- | Render 'False' as @'PutStr' "'False"@
+-- @since 0.2.1.0
+type instance ToPretty 'False = PutStr "'False"
+
+-- | Render a type of kind 'Maybe'.
+-- @since 0.2.1.0
+type instance ToPretty (t :: Maybe x) = ToPrettyMaybe t
+
+-- | Render a type of kind 'Maybe'.
+-- @since 0.2.1.0
+type family ToPrettyMaybe (t :: Maybe x) :: PrettyType where
+  ToPrettyMaybe 'Nothing = 'PrettyEmpty
+  ToPrettyMaybe ('Just x) = ToPretty x
+
+-- ** ToPretty instances for inhabited types
+
+-- | Render 'Word8' as @'PutStr' "Word8"@
+-- @since 0.2.1.0
+type instance ToPretty Word8 = PutStr "Word8"
+
+-- | Render 'Word16' as @'PutStr' "Word16"@
+-- @since 0.2.1.0
+type instance ToPretty Word16 = PutStr "Word16"
+
+-- | Render 'Word32' as @'PutStr' "Word32"@
+-- @since 0.2.1.0
+type instance ToPretty Word32 = PutStr "Word32"
+
+-- | Render 'Word64' as @'PutStr' "Word64"@
+-- @since 0.2.1.0
+type instance ToPretty Word64 = PutStr "Word64"
+
+-- | Render 'Int8' as @'PutStr' "Int8"@
+-- @since 0.2.1.0
+type instance ToPretty Int8 = PutStr "Int8"
+
+-- | Render 'Int16' as @'PutStr' "Int16"@
+-- @since 0.2.1.0
+type instance ToPretty Int16 = PutStr "Int16"
+
+-- | Render 'Int32' as @'PutStr' "Int32"@
+-- @since 0.2.1.0
+type instance ToPretty Int32 = PutStr "Int32"
+
+-- | Render 'Int64' as @'PutStr' "Int64"@
+-- @since 0.2.1.0
+type instance ToPretty Int64 = PutStr "Int64"
+
+-- | Render 'Int' as @'PutStr' "Int"@
+-- @since 0.2.1.0
+type instance ToPretty Int = PutStr "Int"
+
+-- | Render 'Integer' as @'PutStr' "Integer"@
+-- @since 0.2.1.0
+type instance ToPretty Integer = PutStr "Integer"
+
+-- | Render 'Bool' as @'PutStr' "Bool"@
+-- @since 0.2.1.0
+type instance ToPretty Bool = PutStr "Bool"
+
+-- | Render 'Float' as @'PutStr' "Float"@
+-- @since 0.2.1.0
+type instance ToPretty Float = PutStr "Float"
+
+-- | Render 'Double' as @'PutStr' "Double"@
+-- @since 0.2.1.0
+type instance ToPretty Double = PutStr "Double"
 
 -- * Pretty Printing
 
@@ -213,6 +297,7 @@ type PutBits64 x = 'PrettyNat 'PrettyUnpadded ('PrettyPrecision 64) 'PrettyBit x
 -- ** Composing Pretty Printers
 
 -- | A label followed by a colon and space @: @ followed by another element.
+-- @since 0.2.0.0
 --
 -- >>> showPretty (Proxy :: Proxy ("foo" <:> PutStr "bar"))
 -- @
@@ -221,6 +306,7 @@ type PutBits64 x = 'PrettyNat 'PrettyUnpadded ('PrettyPrecision 64) 'PrettyBit x
 type (<:>) label body = 'PrettySuffix (PutStr ":") (PutStr label) <+> body
 infixl 5 <:>
 -- | Like '<:>' but begin the body on a new line.
+-- @since 0.2.0.0
 --
 -- >>> showPretty (Proxy :: Proxy (PutStr "foo" <:$$> PutStr "bar"))
 -- @
@@ -231,6 +317,7 @@ type (<:$$>) label body = 'PrettySuffix (PutStr ":") (PutStr label) <$$> body
 infixl 5 <:$$>
 
 -- | Like '<:$$__>' but indent the body with two spaces.
+-- @since 0.2.0.0
 --
 -- >>> showPretty (Proxy :: Proxy (PutStr "foo" <:$$--> PutStr "bar"))
 -- @
@@ -249,6 +336,7 @@ type (<+>) l r = 'PrettyInfix 'PrettySpace l r
 infixl 5 <+>
 
 -- | Choose the first non-empty from two 'PrettyType's.
+-- @since 0.2.0.0
 type (<||>) l r = 'PrettyAlternative l r
 infixl 5 <||>
 
@@ -257,6 +345,7 @@ type (<$$>) l r = 'PrettyInfix 'PrettyNewline l r
 infixl 4 <$$>
 
 -- | Concatenate two 'PrettyType' using a 'PrettyNewline' and indent the second.
+-- @since 0.2.0.0
 type (<$$-->) l r = 'PrettyInfix 'PrettyNewline l ('PrettyIndent 2 r)
 infixl 3 <$$-->
 
@@ -314,14 +403,18 @@ data PrettyType where
   PrettySymbol :: PrettyPadded -> PrettyPrecision -> Symbol -> PrettyType
   PrettyNat :: PrettyPadded -> PrettyPrecision -> PrettyNatFormat -> Nat -> PrettyType
   -- | Prefix the second with the first argument, but only if it (the second) has content.
+  -- @since 0.2.0.0
   PrettyPrefix :: PrettyType -> PrettyType -> PrettyType
   -- | Combine the last to arguments with the first in between them, but only if both have content.
   PrettyInfix :: PrettyType -> PrettyType -> PrettyType -> PrettyType
   -- | Add a the first argument as suffix to the second argument, but only if the second has content.
+  -- @since 0.2.0.0
   PrettySuffix :: PrettyType -> PrettyType -> PrettyType
   -- | Indentation. Prefix any line using the given number of 'PrettySpace'.
+  -- @since 0.2.0.0
   PrettyIndent :: Nat -> PrettyType -> PrettyType
   -- | Alternative rendering, if the first document ist empty the second will be rendered.
+  -- @since 0.2.0.0
   PrettyAlternative :: PrettyType -> PrettyType -> PrettyType
 
 -- | Padding for 'PrettyType's 'PrettySymbol' and 'PrettyNat'.
@@ -375,13 +468,16 @@ class PrettyTypeShow (p :: PrettyType) where
   -- String.
   ptShow :: proxy p -> PTM ()
   -- | Return 'True' if contents would be writting to the output of rendered via 'ptShow'
+  -- @since 0.2.0.0
   ptHasContent :: proxy p -> PTM Bool
   ptHasContent _ = return True
 
--- | Internal monad used by 'ptShow', the state is a 'Bool' indicating
+-- | The monad used by 'ptShow' to keep track of indentation.
+-- @since 0.2.0.0
 type PTM a = RWS Indentation String PTRenderState a
 
 -- | Internal; write a possibly indented string, and update the 'PTRenderState' accordingly.
+-- @since 0.2.0.0
 writeIndented :: String -> PTM ()
 writeIndented s = do
     st <- get
@@ -394,9 +490,11 @@ writeIndented s = do
     Control.Monad.RWS.tell s
 
 -- | Internal type of the indentation used by 'ptShow' in 'PTM'
+-- @since 0.2.0.0
 type Indentation = Int
 
 -- | Internal state used by 'ptShow' in 'PTM'
+-- @since 0.2.0.0
 data PTRenderState = AtBeginningOfLine | AlreadyIndented
 
 -- | Print nothing.
@@ -462,6 +560,7 @@ instance forall x sep . (PrettyTypeShow sep, PrettyTypeShow x) =>
     ptHasContent _ = ptHasContent (Proxy :: Proxy x)
 
 -- | Add a 'PrettyType' suffix to x, but only if 'ptHasContent' holds.
+-- @since 0.2.0.0
 instance forall x sep . (PrettyTypeShow sep, PrettyTypeShow x) =>
          PrettyTypeShow ('PrettySuffix sep x) where
     ptShow _ = do
@@ -473,6 +572,7 @@ instance forall x sep . (PrettyTypeShow sep, PrettyTypeShow x) =>
     ptHasContent _ = ptHasContent (Proxy :: Proxy x)
 
 -- | Render the first document, and if it is empty, the second
+-- @since 0.2.0.0
 instance forall l r . (PrettyTypeShow l, PrettyTypeShow r) =>
          PrettyTypeShow ('PrettyAlternative l r) where
     ptShow _ = do
@@ -487,6 +587,7 @@ instance forall l r . (PrettyTypeShow l, PrettyTypeShow r) =>
 
 
 -- | Render an indented, nested type.
+-- @since 0.2.0.0
 instance forall n r . (PrettyTypeShow r, KnownNat n) =>
          PrettyTypeShow ('PrettyIndent n r) where
 

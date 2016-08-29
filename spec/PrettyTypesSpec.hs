@@ -6,6 +6,8 @@ import           Test.Hspec
 import GHC.TypeLits
 import Data.Kind
 import Data.Proxy
+import Data.Word
+import Data.Int
 
 main :: IO ()
 main = hspec spec
@@ -141,6 +143,46 @@ spec = describe "rendering" $ do
       `shouldBe` "foo\n  bar1\n  bar2\n    bar3\n    bar4"
 
   describe "ToPretty" $ do
+    it "renders a type level symbol like PutStr" $
+      showPretty (PX :: PX (ToPretty "foo")) `shouldBe` showPretty (PX :: PX (PutStr "foo"))
+    it "renders a type level natural like PutNat" $
+      showPretty (PX :: PX (ToPretty 123)) `shouldBe` showPretty (PX :: PX (PutNat 123))
+    it "renders a type level symbol like PutStr" $
+      showPretty (PX :: PX (ToPretty "foo")) `shouldBe` showPretty (PX :: PX (PutStr "foo"))
+    it "renders 'Nothing to empty document" $
+      showPretty (PX :: PX (ToPretty 'Nothing)) `shouldBe` ""
+    it "renders 'Just x to ToPretty x" $
+      showPretty (PX :: PX (ToPretty ('Just "test"))) `shouldBe` "test"
+    it "renders Word8 as PutStr \"Word8\"" $
+      showPretty (PX :: PX (ToPretty Word8)) `shouldBe` "Word8"
+    it "renders Word16 as PutStr \"Word16\"" $
+      showPretty (PX :: PX (ToPretty Word16)) `shouldBe` "Word16"
+    it "renders Word32 as PutStr \"Word32\"" $
+      showPretty (PX :: PX (ToPretty Word32)) `shouldBe` "Word32"
+    it "renders Word64 as PutStr \"Word64\"" $
+      showPretty (PX :: PX (ToPretty Word64)) `shouldBe` "Word64"
+    it "renders Int8 as PutStr \"Int8\"" $
+      showPretty (PX :: PX (ToPretty Int8)) `shouldBe` "Int8"
+    it "renders Int16 as PutStr \"Int16\"" $
+      showPretty (PX :: PX (ToPretty Int16)) `shouldBe` "Int16"
+    it "renders Int32 as PutStr \"Int32\"" $
+      showPretty (PX :: PX (ToPretty Int32)) `shouldBe` "Int32"
+    it "renders Int64 as PutStr \"Int64\"" $
+      showPretty (PX :: PX (ToPretty Int64)) `shouldBe` "Int64"
+    it "renders Int as PutStr \"Int\"" $
+      showPretty (PX :: PX (ToPretty Int)) `shouldBe` "Int"
+    it "renders Integer as PutStr \"Integer\"" $
+      showPretty (PX :: PX (ToPretty Integer)) `shouldBe` "Integer"
+    it "renders Bool as PutStr \"Bool\"" $
+      showPretty (PX :: PX (ToPretty Bool)) `shouldBe` "Bool"
+    it "renders Float as PutStr \"Float\"" $
+      showPretty (PX :: PX (ToPretty Float)) `shouldBe` "Float"
+    it "renders Double as PutStr \"Double\"" $
+      showPretty (PX :: PX (ToPretty Double)) `shouldBe` "Double"
+    it "renders 'True as PutStr \"'True\"" $
+      showPretty (PX :: PX (ToPretty 'True)) `shouldBe` "'True"
+    it "renders 'False as PutStr \"'False\"" $
+      showPretty (PX :: PX (ToPretty 'False)) `shouldBe` "'False"
     it "renders a custom type" $ do
       putStrLn prettyTestTable
       showPretty (PX :: PX TestTable) `shouldBe` "+-------+-----+------------+\n|  col 1|col 2|       col 3|\n+-------+-----+------------+\n|   2423|  451|       21234|\n| 242322|   42|         n/a|\n|      0| 4351|      623562|\n|   4351|  n/a|         n/a|\n|      0| 4351|      623562|\n+-------+-----+------------+"
