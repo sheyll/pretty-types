@@ -111,6 +111,7 @@ import Data.Proxy
 import Text.Printf
 import Data.Word
 import Data.Int
+import Data.Tagged
 
 -- * Pretty Printing Types
 
@@ -385,6 +386,12 @@ type family
 type family PrettyOften (n :: Nat) (doc :: PrettyType) :: PrettyType where
   PrettyOften 0 doc = 'PrettyEmpty
   PrettyOften n doc = doc <++> PrettyOften (n-1) doc
+
+-- *** Pretty Printing 'Tagged' Values
+
+-- | Pretty print a 'Tagged' value.
+-- @since 0.2.2.0
+type instance ToPretty (Tagged s b) = ToPretty b <+> PrettyParens (ToPretty s)
 
 -- * Basic Building Blocks
 

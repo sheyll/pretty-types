@@ -8,6 +8,7 @@ import Data.Kind
 import Data.Proxy
 import Data.Word
 import Data.Int
+import Data.Tagged
 
 main :: IO ()
 main = hspec spec
@@ -143,6 +144,8 @@ spec = describe "rendering" $ do
       `shouldBe` "foo\n  bar1\n  bar2\n    bar3\n    bar4"
 
   describe "ToPretty" $ do
+    it "renders a 'Tagged'" $
+      showPretty (PX :: PX (ToPretty (Tagged "foo" Word8))) `shouldBe` "Word8 (foo)"
     it "renders a type level symbol like PutStr" $
       showPretty (PX :: PX (ToPretty "foo")) `shouldBe` showPretty (PX :: PX (PutStr "foo"))
     it "renders a type level natural like PutNat" $
