@@ -1,5 +1,5 @@
 name:                pretty-types
-version:             0.2.2.1
+version:             0.2.3.0
 synopsis:            A small pretty printing DSL for complex types.
 description:         Please see README.md
 homepage:            https://github.com/sheyll/pretty-types#readme

@@ -112,6 +112,7 @@ import Text.Printf
 import Data.Word
 import Data.Int
 import Data.Tagged
+import Data.Kind (type Type)
 
 -- * Pretty Printing Types
 
@@ -495,6 +496,53 @@ data PrettyNatFormat =
     -- >>> showPretty (Proxy::Proxy (PrettyNat PrettyUnpadded PrettyPrecise PrettyHexU 51966))
     -- "1100101011111110"
   | PrettyBit
+
+-- * 'PrettyType' Functions
+
+-- | /Kind/ of 'Prettifier' data types.
+--
+-- The type that all data types share, such that they can be passed to
+-- 'PrettifyWith'.
+--
+-- Sometimes it is desirable to pass around __pretty-printing functions__ called
+-- 'Prettifier' in this library. A 'Prettifier' is a __parameterized pretty-printer__
+-- that accepts a parameter of a specific kind.
+--
+-- For example:
+--
+-- @
+-- data PutStrIsh :: Prettifies Symbol
+--
+-- type instance PrettifyWith PutStrIsh str = PutStr str <++> PutStr "ish"
+-- @
+--
+-- >>> showPretty (Proxy @(PrettifyWith PutStrIsh "That's pretty okay"))
+-- "That's pretty okayish"
+--
+-- @since 0.2.3.0
+type Prettifies t = Prettifier t -> Type
+
+-- | An abstract declaration of a __pretty-printing (type-)function__ that takes
+-- a specific kind of types as parameter.
+--
+-- @since 0.2.3.0
+data Prettifier :: Type -> Type
+
+-- | Apply a 'Prettifier' to a type in order to get a 'PrettyType'
+--
+-- @since 0.2.3.0
+type family PrettifyWith (f :: Prettifies k) (x :: k) :: PrettyType
+
+-- ** Basic 'Prettifier's
+
+-- | Write a title and print the indented, 'ToPretty'-fied body starting on the
+-- next line.
+--
+-- @since 0.2.3.0
+data PrettyTitled (title :: PrettyType) (indentation :: Nat) :: Prettifies t
+
+type instance PrettifyWith (PrettyTitled title indentation) body =
+  'PrettyInfix 'PrettyNewline title ('PrettyIndent indentation (ToPretty body))
 
 -- *  Pretty Rendering
 

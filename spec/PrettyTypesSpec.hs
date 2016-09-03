@@ -143,6 +143,11 @@ spec = describe "rendering" $ do
                             PutStr "bar4")))
       `shouldBe` "foo\n  bar1\n  bar2\n    bar3\n    bar4"
 
+  describe "PrettifyWith" $
+    it "applies a 'Prettifier' and creates the desired 'PrettyType'" $
+       showPretty (PX :: PX (PrettifyWith (PrettyTitled (PutStr "The Title") 10) "body"))
+       `shouldBe`
+       "The Title\n          body"
   describe "ToPretty" $ do
     it "renders a 'Tagged'" $
       showPretty (PX :: PX (ToPretty (Tagged "foo" Word8))) `shouldBe` "Word8 (foo)"
