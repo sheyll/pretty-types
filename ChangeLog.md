@@ -1,3 +1,12 @@
+## Version 0.2.3.0
+
+* Added parameterized pretty printing, similar to type-level
+  pretty-printing functions
+
+## Version 0.2.2.1
+
+* Fixed several `@since` haddock comments
+
 ## Version 0.2.2.0
 
 * Added a ToPretty instance for 'Tagged'
