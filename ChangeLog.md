@@ -1,3 +1,7 @@
+## Version 0.2.3.1
+
+* Switch to Stackage LTS-7.0
+
 ## Version 0.2.3.0
 
 * Added parameterized pretty printing, similar to type-level
