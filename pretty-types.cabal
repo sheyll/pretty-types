@@ -1,5 +1,5 @@
 name:                pretty-types
-version:             0.3.0.0
+version:             0.3.0.1
 synopsis:            A small pretty printing DSL for complex types.
 description:         Please see README.md
 homepage:            https://github.com/sheyll/pretty-types#readme
@@ -90,8 +90,7 @@ test-suite spec
                      , TypeInType
                      , TypeOperators
                      , TypeSynonymInstances
-  ghc-options:       -Wall -O0 -j +RTS -A256m -n2m -RTS
-                     -fwarn-unused-binds -fno-warn-unused-do-bind -fno-warn-missing-signatures
+  ghc-options:       -Wall -fno-warn-unused-do-bind -fno-warn-missing-signatures
 
 source-repository head
   type:     git
