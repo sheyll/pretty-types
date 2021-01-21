@@ -9,6 +9,7 @@
 TAGS
 /.idea/
 /.dir-locals.el
-
 src/highlight.js
-src/style.css
+src/style.css/dist*
+/result*
+/dist*
