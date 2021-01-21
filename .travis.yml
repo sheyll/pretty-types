@@ -1,24 +1,11 @@
-language: c
-
-sudo: false
-cache:
-  directories:
-  - $HOME/.stack/
-
-matrix:
-  include:
-    - env: CABALVER=1.24 GHCVER=8.0.1
-      addons: {apt: {packages: [cabal-install-1.24,ghc-8.0.1],sources: [hvr-ghc]}}
-
+language: nix
+env:
+  NIX_CONF_DIR: /tmp
 before_install:
-  - mkdir -p ~/.local/bin
-  - export PATH=~/.local/bin:$PATH
-  - travis_retry curl -L https://www.stackage.org/stack/linux-x86_64 | tar -xzO --wildcards '*/stack' > ~/.local/bin/stack
-  - chmod a+x ~/.local/bin/stack
-
-install:
-  - stack -j 2 setup --no-terminal --resolver nightly
-  - stack -j 2 build --only-snapshot --no-terminal
-
-script:
-  - stack -j 2 test --no-terminal
+  - | 
+      cat > ${NIX_CONF_DIR}/nix.conf <<EOF
+      trusted-public-keys = hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= hydra.nixos.org-1:CNHJZBh9K4tP3EKF6FkkgeVYsS3ohTl+oS0Qa8bezVs=
+      substituters = https://cache.nixos.org https://hydra.iohk.io
+      EOF
+script: 
+   - nix build -L --cores 0 -f default.nix pretty-types.checks
