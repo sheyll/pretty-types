@@ -119,7 +119,7 @@ import Data.Kind (type Type)
 -- | Pretty print either types of kind 'PrettyType' or any other type with a
 -- 'ToPretty' instance.
 showPretty
-  :: forall proxy (t :: k) . PrettyTypeShow (ToPretty t)
+  :: forall k proxy (t :: k) . PrettyTypeShow (ToPretty t)
   => proxy t  -- ^ A proxy to the type to print. A 'ToPretty' instance for t must exists.
   -> String
 showPretty _ = snd $ evalRWS (ptShow (Proxy :: Proxy (ToPretty t))) 0 AtBeginningOfLine
