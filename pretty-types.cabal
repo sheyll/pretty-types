@@ -12,9 +12,7 @@ copyright:           2016-2021 Sven Heyll
 category:            Text
 build-type:          Simple
 extra-source-files:   README.md
-                    , stack.yaml
-                    , .travis.yml
-                    , .gitignore
+                    , cabal.project
                     , ChangeLog.md
 
 library
