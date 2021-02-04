@@ -1,3 +1,4 @@
+[![Build Results](https://github.com/sheyll/pretty-types/workflows/Test/badge.svg?branch=main)](https://github.com/sheyll/pretty-types/actions)
 [![Hackage](https://img.shields.io/badge/hackage-prettytypes-green.svg?style=flat)](http://hackage.haskell.org/package/pretty-types)
 
 # Type Pretty Printing
